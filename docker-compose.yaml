@@ -1,0 +1,41 @@
+services:
+    eliza:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command:
+            [
+                "pnpm",
+                "start",
+                "--characters=characters/goggins.character.json"
+            ]
+        stdin_open: true
+        tty: true
+        volumes:
+            - ./characters:/app/characters
+            - ./.env:/app/.env
+            - ./agent:/app/agent
+            - ./docs:/app/docs
+            - ./scripts:/app/scripts
+            - tee:/app/packages/client-twitter/src/tweetcache
+            - tee:/app/db.sqlite
+        environment:
+            - DISCORD_APPLICATION_ID=${DISCORD_APPLICATION_ID}
+            - DISCORD_API_TOKEN=${DISCORD_API_TOKEN}
+            - DISCORD_VOICE_CHANNEL_ID=${DISCORD_VOICE_CHANNEL_ID}
+            - ELEVENLABS_XI_API_KEY=${ELEVENLABS_XI_API_KEY}
+            - ELEVENLABS_MODEL_ID=${ELEVENLABS_MODEL_ID}
+            - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID}
+            - ELEVENLABS_VOICE_STABILITY=${ELEVENLABS_VOICE_STABILITY}
+            - ELEVENLABS_VOICE_SIMILARITY_BOOST=${ELEVENLABS_VOICE_SIMILARITY_BOOST}
+            - ELEVENLABS_VOICE_STYLE=${ELEVENLABS_VOICE_STYLE}
+            - ELEVENLABS_VOICE_USE_SPEAKER_BOOST=${ELEVENLABS_VOICE_USE_SPEAKER_BOOST}
+            - ELEVENLABS_OPTIMIZE_STREAMING_LATENCY=${ELEVENLABS_OPTIMIZE_STREAMING_LATENCY}
+            - ELEVENLABS_OUTPUT_FORMAT=${ELEVENLABS_OUTPUT_FORMAT}
+            - SERVER_PORT=3000
+        ports:
+            - "3000:3000"
+        restart: always
+
+volumes:
+    tee:
