@@ -102,7 +102,7 @@ const OUTPUT_FILE = 'enriched_broadcasts.csv';
 
 const HEADERS = {
   "Content-Type": "application/json",
-  "Authorization": `Bearer ${process.env.VECTOR_AUTH_TOKEN}`
+  //"Authorization": `Bearer ${process.env.VECTOR_AUTH_TOKEN}`
 };
 
 let seenBroadcastIds = new Set<string>();
