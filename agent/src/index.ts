@@ -522,6 +522,7 @@ export async function createAgent(
         // character.plugins are handled when clients are added
         plugins: [
             bootstrapPlugin,
+            broadcastPlugin,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
                 : null,
@@ -600,6 +601,12 @@ export async function createAgent(
             getSecret(character, "FUEL_PRIVATE_KEY") ? fuelPlugin : null,
             getSecret(character, "AVALANCHE_PRIVATE_KEY")
                 ? avalanchePlugin
+                : null,
+            getSecret(character, "VECTOR_AUTH_TOKEN") || getSecret(character, "AUTH_TOKEN")
+                ? broadcastPlugin
+                : null,
+            getSecret(character, "GRAPHQL_API_KEY")
+                ? broadcastPlugin
                 : null,
         ].filter(Boolean),
         providers: [],

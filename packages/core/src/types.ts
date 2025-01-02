@@ -1278,3 +1278,13 @@ export interface ActionResponse {
 export interface ISlackService extends Service {
     client: any;
 }
+
+interface CharacterSettings {
+    discord?: {
+        channels?: {
+            [key: string]: {
+                id: string;
+            };
+        };
+    };
+}

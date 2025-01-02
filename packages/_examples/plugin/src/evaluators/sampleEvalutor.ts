@@ -46,7 +46,7 @@ export const sampleEvaluator: Evaluator = {
         }
     },
     name: "sampleEvaluator",
-    validate: async (runtime: IAgentRuntime, memory: Memory, state: State) => {
+    validate: async (_runtime: IAgentRuntime, _memory: Memory, state: State) => {
         // Validation logic for the evaluator
         return true;
     },

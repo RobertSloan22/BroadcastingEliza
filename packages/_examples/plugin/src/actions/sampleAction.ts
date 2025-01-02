@@ -46,13 +46,13 @@ export const createResourceAction: Action = {
             }
 
             // persist relevant data if needed to memory/knowledge
-            // const memory = {
-            //     type: "resource",
-            //     content: resourceDetails.object,
-            //     timestamp: new Date().toISOString()
-            // };
+             const memory = {
+                 type: "resource",
+                 content: resourceDetails.object,
+                 timestamp: new Date().toISOString()
+             };
 
-            // await runtime.storeMemory(memory);
+             await runtime.storeMemory(memory);
 
             callback(
                 {
