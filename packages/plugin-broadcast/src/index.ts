@@ -1,16 +1,20 @@
 import { Plugin } from '@elizaos/core';
-import { broadcastTrackerAction, enhancedBroadcastTrackerAction, vectorApiAction, apiCallAction, graphCallAction } from './actions';
+import { apiCallAction } from './actions';
+import * as types from './types';
 
 export const broadcastPlugin: Plugin = {
   name: 'broadcast',
-  description: 'Plugin for broadcasting messages and tracking token broadcasts',
-  actions: [
-    broadcastTrackerAction,
-    enhancedBroadcastTrackerAction,
-    vectorApiAction,
-    apiCallAction,
-    graphCallAction
-  ]
+  description: 'api call plugin',
+  actions: [ apiCallAction ],
+  providers: [],
+  evaluators: []
+
 };
 
 export default broadcastPlugin;
+export { apiCallAction } from './actions';
+
+export { types };
+
+
+
