@@ -47,7 +47,10 @@
     "ts-node": "10.9.2",
     "tslib": "2.8.1",
     "tsup": "8.3.5",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "@types/axios": "^0.14.0",
+    "@types/dompurify": "^3.0.5",
+    "@types/ioredis": "^5.0.0"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "0.0.56",

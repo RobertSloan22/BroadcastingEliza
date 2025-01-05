@@ -1,5 +1,4 @@
 import { Action, IAgentRuntime, Memory, State } from "@elizaos/core";
-import * as fs from 'fs';
 import { randomUUID } from 'crypto';
 import _ from 'lodash';
 
@@ -62,22 +61,22 @@ interface BroadcastData {
   buy_token_is_jupVerified: number;
   buy_token_freezable: boolean;
   buy_token_is_freezable: number;
-  buy_token_twitter?: string;
+  buy_token_twitter: string;
   buy_token_has_twitter: number;
-  buy_token_telegram?: string;
+  buy_token_telegram: string;
   buy_token_has_telegram: number;
-  buy_token_website?: string;
+  buy_token_website: string;
   buy_token_has_website: number;
-  buy_token_discord?: string;
+  buy_token_discord: string;
   buy_token_has_discord: number;
   buy_token_top10HolderPercent: string;
   buy_token_top10HolderPercentV2: string;
   price_30s_variance: number | null;
   price_1m_variance: number | null;
   price_5m_variance: number | null;
-  won_30s: boolean | null;
-  won_1m: boolean | null;
-  won_5m: boolean | null;
+  won_30s: number | null;
+  won_1m: number | null;
+  won_5m: number | null;
 }
 
 // Add this with other interfaces
@@ -141,7 +140,6 @@ interface TokenResponse {
 // Configuration
 const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || 'https://mainnet-api.vector.fun/graphql';
 const YOUR_PROFILE_ID = process.env.YOUR_PROFILE_ID || 'system';
-const OUTPUT_FILE = 'enriched_broadcasts.csv';
 
 const FEED_QUERY = `
   query FeedListsQuery($mode: FeedMode!, $sortOrder: FeedSortOrder!, $filters: FeedFilters, $after: String, $first: Int) {
@@ -221,86 +219,6 @@ const TOKEN_QUERY = `
 
 // State management
 let seenBroadcastIds = new Set<string>();
-let broadcastDataDict: { [key: string]: BroadcastData } = {};
-
-// CSV management functions
-function initializeCsv(): void {
-  if (!fs.existsSync(OUTPUT_FILE)) {
-    const headers = [
-      'broadcast_id', 'created_at',
-      'user_id', 'user_username',
-      // ... all headers from Python script
-      'buy_token_id', 'buy_token_amount', 'buy_token_price_bcast', 'buy_token_mcap_bcast',
-      'sell_token_id', 'sell_token_amount', 'sell_token_price_bcast', 'sell_token_mcap_bcast',
-    ];
-    fs.writeFileSync(OUTPUT_FILE, headers.join(',') + '\n');
-  } else {
-    const content = fs.readFileSync(OUTPUT_FILE, 'utf-8');
-    const rows = content.split('\n').slice(1);
-    rows.forEach(row => {
-      if (!row) return;
-      const fields = row.split(',');
-      const broadcastId = fields[0];
-      if (broadcastId) {
-        seenBroadcastIds.add(broadcastId);
-        try {
-          broadcastDataDict[broadcastId] = JSON.parse(row);
-        } catch (e) {
-          console.error(`Error parsing row for broadcast ${broadcastId}`);
-        }
-      }
-    });
-  }
-}
-
-async function rewriteCsv(): Promise<void> {
-  const rows = Object.values(broadcastDataDict).map(data =>
-    Object.values(data).map(value =>
-      value === null ? '' : String(value)
-    ).join(',')
-  );
-  const headers = Object.keys(Object.values(broadcastDataDict)[0] || {}).join(',');
-  fs.writeFileSync(OUTPUT_FILE, headers + '\n' + rows.join('\n'));
-}
-
-// GraphQL request function with retry logic
-async function makeGraphQLRequestWithRetry<T>(
-  query: string,
-  variables: any = {},
-  retries = 3
-): Promise<{ data: T }> {
-  const headers = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${process.env.VECTOR_AUTH_TOKEN}`
-  };
-
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(GRAPHQL_ENDPOINT, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ query, variables }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.errors) {
-        throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
-      }
-
-      return data as { data: T };
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
-    }
-  }
-
-  throw new Error('All retries failed');
-}
 
 // Data fetching functions
 async function fetchBroadcasts(cursor?: string) {
@@ -352,59 +270,6 @@ async function computeVariance(
   return 0;
 }
 
-// Add after computeVariance function
-async function scheduleUpdates(
-  runtime: IAgentRuntime,
-  broadcastId: string,
-  buyTokenId: string,
-  buyPriceBcast: number
-): Promise<void> {
-  // Schedule 30s update
-  setTimeout(async () => {
-    const variance30s = await computeVariance(buyTokenId, buyPriceBcast);
-    broadcastDataDict[broadcastId].price_30s_variance = variance30s;
-    broadcastDataDict[broadcastId].won_30s = variance30s > 25;
-    await rewriteCsv();
-  }, 30000);
-
-  // Schedule 1m update
-  setTimeout(async () => {
-    const variance1m = await computeVariance(buyTokenId, buyPriceBcast);
-    broadcastDataDict[broadcastId].price_1m_variance = variance1m;
-    broadcastDataDict[broadcastId].won_1m = variance1m > 25;
-    await rewriteCsv();
-  }, 60000);
-
-  // Schedule 5m update
-  setTimeout(async () => {
-    const variance5m = await computeVariance(buyTokenId, buyPriceBcast);
-    broadcastDataDict[broadcastId].price_5m_variance = variance5m;
-    broadcastDataDict[broadcastId].won_5m = variance5m > 25;
-    await rewriteCsv();
-  }, 300000);
-}
-
-// Discord message handling
-async function sendDiscordMessage(
-  runtime: IAgentRuntime,
-  channelName: string,
-  content: any
-) {
-  const memory: Memory = {
-    id: randomUUID(),
-    content: {
-      ...content,
-      channelName
-    },
-    roomId: randomUUID(),
-    userId: randomUUID(),
-    agentId: runtime.agentId || randomUUID(),
-    createdAt: Date.now()
-  };
-
-  await runtime.messageManager.createMemory(memory);
-}
-
 // Alert functions
 async function sendBroadcastAlert(
   runtime: IAgentRuntime,
@@ -424,10 +289,20 @@ async function sendBroadcastAlert(
     timestamp: new Date().toISOString()
   };
 
-  await sendDiscordMessage(runtime, "broadcast-alerts", {
-    text: `New broadcast detected for ${buyTokenData?.symbol || broadcast.buyTokenId}`,
-    embeds: [embed]
-  });
+  const message = {
+    id: randomUUID(),
+    content: {
+      text: `New broadcast detected for ${buyTokenData?.symbol || broadcast.buyTokenId}`,
+      embeds: [embed],
+      channelName: "broadcast-alerts"
+    },
+    roomId: randomUUID(),
+    userId: randomUUID(),
+    agentId: runtime.agentId || randomUUID(),
+    createdAt: Date.now()
+  };
+
+  await runtime.messageManager.createMemory(message);
 }
 
 // Main broadcast processing
@@ -501,13 +376,13 @@ async function processBroadcast(
     buy_token_is_jupVerified: buyTokenData?.jupVerified ? 1 : 0,
     buy_token_freezable: buyTokenData?.freezable || false,
     buy_token_is_freezable: buyTokenData?.freezable ? 1 : 0,
-    buy_token_twitter: buyTokenData?.twitter,
+    buy_token_twitter: buyTokenData?.twitter || '',
     buy_token_has_twitter: buyTokenData?.twitter ? 1 : 0,
-    buy_token_telegram: buyTokenData?.telegram,
+    buy_token_telegram: buyTokenData?.telegram || '',
     buy_token_has_telegram: buyTokenData?.telegram ? 1 : 0,
-    buy_token_website: buyTokenData?.website,
+    buy_token_website: buyTokenData?.website || '',
     buy_token_has_website: buyTokenData?.website ? 1 : 0,
-    buy_token_discord: buyTokenData?.discord,
+    buy_token_discord: buyTokenData?.discord || '',
     buy_token_has_discord: buyTokenData?.discord ? 1 : 0,
     buy_token_top10HolderPercent: '0',
     buy_token_top10HolderPercentV2: '0',
@@ -519,63 +394,80 @@ async function processBroadcast(
     won_5m: null
   };
 
-  broadcastDataDict[broadcastId] = rowData;
-  await rewriteCsv();
+  // Save to MongoDB
+  const db = await runtime.providers.database;
+  await db.broadcasts.insertOne(rowData);
 
   // Send alert and schedule updates
   await sendBroadcastAlert(runtime, broadcast, buyTokenData);
   await scheduleUpdates(runtime, broadcastId, broadcast.buyTokenId, broadcast.buyTokenPrice);
 }
 
-// Export the action
-export const broadcastTrackerAction: Action = {
-  name: "TRACK_BROADCAST",
-  similes: ["MONITOR_BROADCAST", "ANALYZE_BROADCAST"],
-  description: "Tracks and analyzes token broadcasts with price variance monitoring",
-  examples: [
-    [
-      {
-        user: "user1",
-        content: {
-          text: "Start tracking token broadcasts"
+// Schedule price variance updates
+async function scheduleUpdates(
+  runtime: IAgentRuntime,
+  broadcastId: string,
+  buyTokenId: string,
+  buyPriceBcast: number
+) {
+  const delays = [30000, 60000, 300000]; // 30s, 1m, 5m
+  const db = await runtime.providers.database;
+
+  for (const delay of delays) {
+    setTimeout(async () => {
+      try {
+        const variance = await computeVariance(buyTokenId, buyPriceBcast);
+        const won = variance > 0 ? 1 : variance < 0 ? 0 : null;
+
+        const update: Partial<BroadcastData> = {};
+        if (delay === 30000) {
+          update.price_30s_variance = variance;
+          update.won_30s = won;
+        } else if (delay === 60000) {
+          update.price_1m_variance = variance;
+          update.won_1m = won;
+        } else {
+          update.price_5m_variance = variance;
+          update.won_5m = won;
         }
-      },
-      {
-        user: "assistant",
-        content: {
-          text: "Starting broadcast tracking system...",
-          action: "TRACK_BROADCAST"
-        }
+
+        await db.broadcasts.updateOne(
+          { broadcast_id: broadcastId },
+          { $set: update }
+        );
+
+      } catch (error) {
+        console.error(`Error updating price variance for broadcast ${broadcastId}:`, error);
       }
-    ],
-    [
-      {
-        user: "user1",
-        content: {
-          text: "Monitor new broadcasts and price movements"
-        }
-      },
-      {
-        user: "assistant",
-        content: {
-          text: "Initializing broadcast monitoring and price tracking...",
-          action: "TRACK_BROADCAST"
-        }
-      }
-    ]
-  ],
-  validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
-    const content = message.content as { text: string };
-    return /\b(broadcast|token|price|trade)\b/i.test(content.text);
-  },
+    }, delay);
+  }
+}
+
+const broadcastTrackerAction: Action = {
+  name: 'broadcast-tracker',
+  description: 'Track broadcasts and store data',
   handler: async (runtime: IAgentRuntime, message: Memory, state?: State): Promise<boolean> => {
     try {
-      initializeCsv();
+      // Initialize MongoDB connection
+      const db = await runtime.providers.database;
+
+      // Load seen broadcast IDs from MongoDB
+      const existingBroadcasts = await db.broadcasts.find({}, { projection: { broadcast_id: 1 } }).toArray();
+      seenBroadcastIds = new Set(existingBroadcasts.map(b => b.broadcast_id));
 
       // Create initial status message
-      await sendDiscordMessage(runtime, "broadcast-alerts", {
-        text: "🚀 Broadcast monitoring started! Tracking new broadcasts and price movements..."
-      });
+      const startMessage = {
+        id: randomUUID(),
+        content: {
+          text: "🚀 Broadcast monitoring started! Tracking new broadcasts and price movements...",
+          channelName: "broadcast-alerts"
+        },
+        roomId: randomUUID(),
+        userId: randomUUID(),
+        agentId: runtime.agentId || randomUUID(),
+        createdAt: Date.now()
+      };
+      await runtime.messageManager.createMemory(startMessage);
 
       while (true) {
         const broadcasts = await fetchBroadcasts();
@@ -590,26 +482,60 @@ export const broadcastTrackerAction: Action = {
 
         // Export data to Discord every hour
         if (Date.now() % 3600000 < 1000) {
-          await sendDiscordMessage(runtime, "market-data", {
-            text: "📊 Latest market data export",
-            file: {
-              name: "enriched_broadcasts.csv",
-              path: OUTPUT_FILE
-            }
-          });
+          const broadcasts = await db.broadcasts
+            .find({})
+            .sort({ created_at: -1 })
+            .limit(100)
+            .toArray();
+
+          const message = {
+            id: randomUUID(),
+            content: {
+              text: "📊 Latest market data summary",
+              embeds: [{
+                title: "Recent Broadcasts",
+                description: `Total broadcasts tracked: ${await db.broadcasts.countDocuments()}`,
+                fields: [
+                  {
+                    name: "Recent Activity",
+                    value: `Last ${broadcasts.length} broadcasts:\n` +
+                      broadcasts.slice(0, 5).map(b =>
+                        `${b.buy_token_symbol || b.buy_token_id}: $${b.buy_token_price_bcast}`
+                      ).join('\n')
+                  }
+                ]
+              }],
+              channelName: "market-data"
+            },
+            roomId: randomUUID(),
+            userId: randomUUID(),
+            agentId: runtime.agentId || randomUUID(),
+            createdAt: Date.now()
+          };
+
+          await runtime.messageManager.createMemory(message);
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (error) {
       console.error("Broadcast tracking failed:", error);
-      await sendDiscordMessage(runtime, "broadcast-alerts", {
-        text: "⚠️ Error in broadcast tracking. Please check the logs.",
-        embeds: [{
-          title: "Error Details",
-          description: error.message
-        }]
-      });
+      const errorMessage = {
+        id: randomUUID(),
+        content: {
+          text: "⚠️ Error in broadcast tracking. Please check the logs.",
+          embeds: [{
+            title: "Error Details",
+            description: error.message
+          }],
+          channelName: "broadcast-alerts"
+        },
+        roomId: randomUUID(),
+        userId: randomUUID(),
+        agentId: runtime.agentId || randomUUID(),
+        createdAt: Date.now()
+      };
+      await runtime.messageManager.createMemory(errorMessage);
       return false;
     }
   }

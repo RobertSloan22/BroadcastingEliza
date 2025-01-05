@@ -3,19 +3,19 @@ import { Models, ModelProviderName, ModelClass } from "./types.ts";
 
 export const models: Models = {
     [ModelProviderName.OPENAI]: {
-        endpoint: settings.OPENAI_API_URL || "https://api.openai.com/v1",
+        endpoint: settings.OPENAI_API_URL || "http://192.168.1.124:8000/v1",
         settings: {
-            stop: [],
-            maxInputTokens: 128000,
-            maxOutputTokens: 8192,
+            stop: [" "],
+            maxInputTokens: 32768,
+            maxOutputTokens: 4096,
             frequency_penalty: 0.0,
             presence_penalty: 0.0,
-            temperature: 0.6,
+            temperature: 0.7,
         },
         model: {
-            [ModelClass.SMALL]: settings.SMALL_OPENAI_MODEL || "gpt-4o-mini",
-            [ModelClass.MEDIUM]: settings.MEDIUM_OPENAI_MODEL || "gpt-4o",
-            [ModelClass.LARGE]: settings.LARGE_OPENAI_MODEL || "gpt-4o",
+            [ModelClass.SMALL]: settings.SMALL_OPENAI_MODEL || "mistral-7b-instruct",
+            [ModelClass.MEDIUM]: settings.MEDIUM_OPENAI_MODEL || "mistral-7b-instruct",
+            [ModelClass.LARGE]: settings.LARGE_OPENAI_MODEL || "mistral-7b-instruct",
             [ModelClass.EMBEDDING]: settings.EMBEDDING_OPENAI_MODEL || "text-embedding-3-small",
             [ModelClass.IMAGE]: settings.IMAGE_OPENAI_MODEL || "dall-e-3",
         },

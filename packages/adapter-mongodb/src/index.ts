@@ -14,16 +14,20 @@ import {
     getEmbeddingConfig,
 } from "@elizaos/core";
 import { v4 as uuid } from "uuid";
+import { MongoConfig, MongoDocument } from "./types";
 
 export class MongoDBAdapter extends DatabaseAdapter<Db> {
     private client: MongoClient;
-    public db: Db;
+    declare public db: Db;
     private isConnected: boolean = false;
 
-    constructor(mongoUrl: string, dbName: string) {
+    constructor(config: MongoConfig) {
         super();
-        this.client = new MongoClient(mongoUrl);
-        this.db = this.client.db(dbName);
+        this.client = new MongoClient(config.mongoUrl, {
+            maxPoolSize: config.options?.maxPoolSize || 20,
+            connectTimeoutMS: config.options?.connectionTimeoutMs || 5000
+        });
+        this.db = this.client.db(config.dbName);
     }
 
     async init() {
