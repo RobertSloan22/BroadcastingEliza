@@ -10,7 +10,8 @@ import { IAgentRuntime, State, type Memory } from "./types.ts";
 export async function getProviders(
     runtime: IAgentRuntime,
     message: Memory,
-    state?: State
+    state?: State,
+    
 ) {
     const providerResults = (
         await Promise.all(

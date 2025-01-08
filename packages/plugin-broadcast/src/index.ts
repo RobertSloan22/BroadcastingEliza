@@ -1,23 +1,29 @@
 import { Plugin } from '@elizaos/core';
 import { apiCallAction } from './actions';
 import * as types from './types';
-import { databaseProvider } from './providers';
-import { broadcastEvaluator } from './evaluators/broadcastEvaluator';
+import { broadcastDataEvaluator } from './evaluators/broadcastDataEvaluator';
+import { Provider } from '@elizaos/core';
 
+
+
+export * as actions from "./actions";
+export * as evaluators from "./evaluators";
+export * as providers from "./providers";
 export const broadcastPlugin: Plugin = {
   name: 'broadcast',
   description: 'api call plugin',
   actions: [ apiCallAction ],
-  providers: [ databaseProvider ],
-  evaluators: [ broadcastEvaluator ]
+  providers: [],
+  evaluators: [  broadcastDataEvaluator ]
 };
 
 export default broadcastPlugin;
 export { apiCallAction } from './actions';
-export { databaseProvider } from './providers';
-export { broadcastEvaluator } from './evaluators/broadcastEvaluator';
 
 export { types };
+
+export * from './utils/graphql';
+export * from './evaluators/broadcastEvaluator';
 
 
 

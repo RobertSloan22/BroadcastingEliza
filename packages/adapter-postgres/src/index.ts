@@ -24,6 +24,9 @@ import {
     getEmbeddingConfig,
     DatabaseAdapter,
     EmbeddingProvider,
+    Provider,
+    IAgentRuntime,
+    State
 } from "@elizaos/core";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -34,7 +37,7 @@ const __dirname = path.dirname(__filename); // get the name of the directory
 
 export class PostgresDatabaseAdapter
     extends DatabaseAdapter<Pool>
-    implements IDatabaseCacheAdapter
+    implements IDatabaseCacheAdapter, Provider
 {
     private pool: Pool;
     private readonly maxRetries: number = 3;
@@ -55,6 +58,11 @@ export class PostgresDatabaseAdapter
             max: 20,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: this.connectionTimeout,
+            host: process.env.POSTGRES_HOST,
+            port: parseInt(process.env.POSTGRES_PORT!),
+            user: process.env.POSTGRES_USER,
+            password: process.env.POSTGRES_PASSWORD,
+            database: process.env.POSTGRES_DB
         };
 
         this.pool = new pg.Pool({
@@ -1459,6 +1467,11 @@ export class PostgresDatabaseAdapter
                 return false;
             }
         }, "deleteCache");
+    }
+
+    async get(runtime: IAgentRuntime, message: Memory, state?: State): Promise<any> {
+        return this;
+        
     }
 }
 

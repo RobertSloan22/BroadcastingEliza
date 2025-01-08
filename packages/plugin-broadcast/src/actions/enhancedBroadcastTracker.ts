@@ -3,6 +3,7 @@ import { createObjectCsvWriter } from 'csv-writer';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import PostgresProvider, { PostgresDatabaseAdapter } from '@elizaos/adapter-postgres';
 
 interface TokenData {
     name: string;
@@ -488,8 +489,79 @@ async function processBroadcast(runtime: IAgentRuntime, broadcast: any, buyToken
         won_5m: null
     };
 
+    // Store in CSV
     broadcastDataDict[broadcastId] = rowData;
     await rewriteCsv();
+
+    // Store in Postgres
+    try {
+        const postgresProvider = runtime.providers.find(p => p instanceof PostgresProvider);
+        if (postgresProvider) {
+            const db = postgresProvider as PostgresDatabaseAdapter;
+
+            await db.query(`
+                INSERT INTO broadcasts (
+                    id,
+                    broadcast_id,
+                    user_id,
+                    user_username,
+                    buy_token_id,
+                    buy_token_amount,
+                    buy_token_price,
+                    buy_token_mcap,
+                    sell_token_id,
+                    sell_token_amount,
+                    sell_token_price,
+                    sell_token_mcap,
+                    buy_token_name,
+                    buy_token_symbol,
+                    buy_token_chain,
+                    buy_token_liquidity,
+                    buy_token_volume24h,
+                    buy_token_verified,
+                    user_is_verified,
+                    user_follower_count,
+                    raw_data
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                    buy_token_price = EXCLUDED.buy_token_price,
+                    buy_token_mcap = EXCLUDED.buy_token_mcap,
+                    buy_token_volume24h = EXCLUDED.buy_token_volume24h,
+                    raw_data = EXCLUDED.raw_data
+            `, [
+                randomUUID(),
+                broadcastId,
+                broadcast.profile.id,
+                broadcast.profile.username,
+                broadcast.buyTokenId,
+                parseFloat(broadcast.buyTokenAmount),
+                parseFloat(broadcast.buyTokenPrice),
+                parseFloat(broadcast.buyTokenMCap),
+                broadcast.sellTokenId,
+                parseFloat(broadcast.sellTokenAmount),
+                parseFloat(broadcast.sellTokenPrice),
+                parseFloat(broadcast.sellTokenMCap),
+                buyTokenData?.name || '',
+                buyTokenData?.symbol || '',
+                buyTokenData?.chain || '',
+                buyTokenData?.liquidity ? parseFloat(buyTokenData.liquidity) : null,
+                buyTokenData?.volume24h ? parseFloat(buyTokenData.volume24h) : null,
+                buyTokenData?.verified || false,
+                userData?.isVerified || false,
+                userData?.followerCount || 0,
+                JSON.stringify({
+                    broadcast,
+                    buyTokenData,
+                    userData
+                })
+            ]);
+        }
+    } catch (error) {
+        console.error('Error storing broadcast in database:', error);
+    }
 
     // Send Discord alert
     const message = {

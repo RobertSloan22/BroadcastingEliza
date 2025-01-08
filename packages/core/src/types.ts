@@ -1194,6 +1194,10 @@ export interface ITextGenerationService extends Service {
     getEmbeddingResponse(input: string): Promise<number[] | undefined>;
 }
 
+export interface PostgresDatabaseAdapter extends Provider {
+    get(): Promise<PostgresDatabaseAdapter>;
+}
+
 export interface IBrowserService extends Service {
     closeBrowser(): Promise<void>;
     getPageContent(

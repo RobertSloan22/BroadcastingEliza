@@ -13,10 +13,10 @@ import {
 import { CreateResourceSchema, isCreateResourceContent } from "../types";
 
 import { createResourceTemplate } from "../templates";
-
+// The action BROADCAST_SUMMARY IS used to get the broadcast data from the 
 export const createResourceAction: Action = {
-    name: "CREATE_RESOURCE",
-    description: "Create a new resource with the specified details",
+    name: "BROADCAST_SUMMARY",
+    description: "Summarize the latest broadcast data and post it to the channel",
     validate: async (runtime: IAgentRuntime, _message: Memory) => {
         return !!runtime.character.settings.secrets?.API_KEY;
     },

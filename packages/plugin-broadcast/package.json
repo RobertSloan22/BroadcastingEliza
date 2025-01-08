@@ -11,10 +11,15 @@
   },
   "dependencies": {
     "@elizaos/adapter-mongodb": "workspace:*",
+    "@elizaos/adapter-postgres": "^0.1.7",
+    "@elizaos/client-auto": "^0.1.7",
+    "@elizaos/client-direct": "^0.1.7",
     "@elizaos/core": "workspace:*",
+    "@tavily/core": "^0.0.2",
     "csv-writer": "^1.6.0",
     "node-fetch": "^3.3.2",
     "papaparse": "^5.4.1",
+    "pg": "8.13.1",
     "tsup": "8.3.5"
   },
   "devDependencies": {

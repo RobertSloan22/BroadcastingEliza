@@ -2,9 +2,17 @@ import {
     Action,
     IAgentRuntime,
     Memory,
+    HandlerCallback,
     State,
-    HandlerCallback
+    composeContext,
+    generateObject,
+    ModelClass,
+    elizaLogger,
 } from "@elizaos/core";
+
+import { CreateResourceSchema, isCreateResourceContent } from "../types";
+
+
 
 export const apiCallAction: Action = {
     name: "apiCallAction",
@@ -14,12 +22,12 @@ export const apiCallAction: Action = {
 
 
     ],
-    validate: async (_runtime: IAgentRuntime, _message: Memory) => true,
+    validate: async (runtime: IAgentRuntime, message: Memory) => true,
     handler: async (
-        _runtime: IAgentRuntime,
-        _message: Memory,
-        _state: State,
-        _options?: { [key: string]: unknown },
+        runtime: IAgentRuntime,
+        message: Memory,
+        state: State,
+        options?: { [key: string]: unknown },
         callback?: HandlerCallback
     ): Promise<boolean> => {
         try {
@@ -44,6 +52,21 @@ export const apiCallAction: Action = {
 
             const data = await response.json();
             console.log(data);
+
+            const memory = {
+                id: crypto.randomUUID(),
+                type: "broadcast_data",
+                content: {
+                    text: JSON.stringify(data),
+                    raw: data
+                },
+                roomId: message.roomId,
+                userId: message.userId,
+                agentId: runtime.agentId,
+                timestamp: new Date().toISOString()
+            };
+
+            await runtime.knowledgeManager.createMemory(memory);
 
             // Return the raw response without any processing
             callback?.({

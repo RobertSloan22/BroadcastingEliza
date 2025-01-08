@@ -33,6 +33,15 @@ export interface Token {
     chain: string;
     decimals: number;
 }
+// TokenResponse needs to contain price as a string
+
+export interface TokenResponse {
+    token: Token;
+    price: string;
+    data: {
+        token: Token;
+    };
+}
 
 export interface BroadcastNode {
     broadcast: Broadcast;

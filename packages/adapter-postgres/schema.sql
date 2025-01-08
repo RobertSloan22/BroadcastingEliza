@@ -127,11 +127,39 @@ CREATE TABLE IF NOT EXISTS  cache (
     PRIMARY KEY ("key", "agentId")
 );
 
+CREATE TABLE IF NOT EXISTS broadcasts (
+    "id" UUID PRIMARY KEY,
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "broadcast_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "user_username" TEXT NOT NULL,
+    "buy_token_id" TEXT,
+    "buy_token_amount" NUMERIC,
+    "buy_token_price" NUMERIC,
+    "buy_token_mcap" NUMERIC,
+    "sell_token_id" TEXT,
+    "sell_token_amount" NUMERIC,
+    "sell_token_price" NUMERIC,
+    "sell_token_mcap" NUMERIC,
+    "buy_token_name" TEXT,
+    "buy_token_symbol" TEXT,
+    "buy_token_chain" TEXT,
+    "buy_token_liquidity" NUMERIC,
+    "buy_token_volume24h" NUMERIC,
+    "buy_token_verified" BOOLEAN,
+    "user_is_verified" BOOLEAN,
+    "user_follower_count" INTEGER,
+    "raw_data" JSONB
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_memories_embedding ON memories USING hnsw ("embedding" vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_memories_type_room ON memories("type", "roomId");
 CREATE INDEX IF NOT EXISTS idx_participants_user ON participants("userId");
 CREATE INDEX IF NOT EXISTS idx_participants_room ON participants("roomId");
 CREATE INDEX IF NOT EXISTS idx_relationships_users ON relationships("userA", "userB");
+CREATE INDEX idx_broadcasts_created_at ON broadcasts("createdAt" DESC);
+CREATE INDEX idx_broadcasts_user_username ON broadcasts("user_username");
+CREATE INDEX idx_broadcasts_buy_token_id ON broadcasts("buy_token_id");
 
 COMMIT;

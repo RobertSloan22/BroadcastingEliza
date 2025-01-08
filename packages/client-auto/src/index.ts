@@ -1,4 +1,5 @@
-import { Client, IAgentRuntime, elizaLogger } from "@elizaos/core";
+import { Client, IAgentRuntime, elizaLogger, Memory, stringToUuid } from "@elizaos/core";
+import { apiCallAction } from "@elizaos/plugin-broadcast";
 
 export class AutoClient {
     interval: NodeJS.Timeout;
@@ -7,13 +8,63 @@ export class AutoClient {
     constructor(runtime: IAgentRuntime) {
         this.runtime = runtime;
 
-        // start a loop that runs every x seconds
+        // Start a loop that runs every 5 minutes
         this.interval = setInterval(
             async () => {
-                elizaLogger.log("running auto client...");
+                elizaLogger.log("Running auto client...");
+
+                // Call the apiCall action from plugin-broadcast
+                await this.callApiAndStoreResponse();
             },
-            60 * 60 * 1000
-        ); // 1 hour in milliseconds
+            5 * 60 * 1000 // 5 minutes in milliseconds
+        );
+    }
+
+    async callApiAndStoreResponse() {
+        try {
+            elizaLogger.log("Calling apiCallAction...");
+
+            await apiCallAction.handler(this.runtime, undefined, {
+                bio: "",
+                lore: "",
+                messageDirections: "",
+                postDirections: "",
+                roomId: stringToUuid("auto-client-room"),
+                recentMessages: "",
+                recentMessagesData: [],
+                actors: ""
+            }, {}, async (response) => {
+                if (response) {
+                    elizaLogger.log("API response received:", response);
+
+                    // Create a memory object to store the response
+                    const memory: Memory = {
+                        id: stringToUuid(Date.now().toString()),
+                        agentId: this.runtime.agentId,
+                        userId: stringToUuid("auto-client"),
+                        roomId: stringToUuid("auto-client-room"),
+                        content: {
+                            text: response.text,
+                            source: "auto-client",
+                        },
+                        createdAt: Date.now(),
+                    };
+
+                    elizaLogger.log("Memory object created:", memory);
+
+                    // Store the memory in the agent's memory
+                    await this.runtime.messageManager.createMemory(memory);
+
+                    elizaLogger.log("API response stored in agent's memory");
+                    return [memory];
+                } else {
+                    elizaLogger.warn("No response received from API call");
+                    return [];
+                }
+            });
+        } catch (error) {
+            elizaLogger.error("Failed to call API or store response:", error);
+        }
     }
 }
 

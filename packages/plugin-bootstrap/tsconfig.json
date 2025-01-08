@@ -9,5 +9,5 @@
     },
     "include": [
         "src/**/*.ts"
-    ]
+, "src/evaluators/getUserDataEvaluator.ts"    ]
 }

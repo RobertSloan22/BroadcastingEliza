@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ElizaOS QA</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $("#init-btn").click(function() {
+                $.post("/init", function(data) {
+                    alert("Initialization completed!");
+                });
+            });
+
+            $("#ask-form").submit(function(event) {
+                event.preventDefault();
+                var question = $("#question").val();
+                $.post("/ask", JSON.stringify({question: question}), function(data) {
+                    $("#answer").text(data.answer);
+                    $("#sources").empty();
+                    data.sources.forEach(function(source) {
+                        $("#sources").append("<li>[" + source.type + "] " + source.source + "</li>");
+                    });
+                }, "json");
+            });
+
+            $("#generate-form").submit(function(event) {
+                event.preventDefault();
+                var filepath = $("#filepath").val();
+                var description = $("#description").val();
+                $.post("/generate", JSON.stringify({filepath: filepath, description: description}), function(data) {
+                    $("#generated-content").text(data.content);
+                }, "json");
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>ElizaOS QA</h1>
+    <button id="init-btn">Initialize</button>
+    <hr>
+    <h2>Ask a Question</h2>
+    <form id="ask-form">
+        <input type="text" id="question" name="question" required>
+        <button type="submit">Ask</button>
+    </form>
+    <h3>Answer</h3>
+    <p id="answer"></p>
+    <h3>Sources</h3>
+    <ul id="sources"></ul>
+    <hr>
+    <h2>Generate File</h2>
+    <form id="generate-form">
+        <label for="filepath">File Path:</label>
+        <input type="text" id="filepath" name="filepath" required><br>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required></textarea><br>
+        <button type="submit">Generate</button>
+    </form>
+    <h3>Generated Content</h3>
+    <pre id="generated-content"></pre>
+</body>
+</html>
